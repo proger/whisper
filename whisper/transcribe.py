@@ -2,6 +2,7 @@ import argparse
 import os
 import warnings
 import copy
+import multiprocessing as mp
 from typing import List, Optional, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
@@ -266,6 +267,11 @@ def transcribe(
 
     return dict(text=tokenizer.decode(all_tokens[len(initial_prompt):]), segments=all_segments, language=language)
 
+def prep_audio(audio_file, N_FRAMES:int):
+    mel = log_mel_spectrogram(audio_file)
+    mel_segments = pad_or_trim(mel, N_FRAMES)
+    return mel_segments
+
 def batch_transcribe(
     model: "Whisper",
     audio: Union[List[str], List[np.ndarray], List[torch.Tensor]],
@@ -332,7 +338,7 @@ def batch_transcribe(
     if dtype == torch.float32:
         decode_options["fp16"] = False
 
-    mels = [log_mel_spectrogram(audio_file) for audio_file in audio]
+    mels = log_mel_spectrogram(audio)
     segments = [pad_or_trim(mel, N_FRAMES).to(model.device).to(dtype) for mel in mels]
 
     if decode_options.get("language", None) is None:

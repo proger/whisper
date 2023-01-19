@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Iterable, Optional, Sequence, Union, TYPE_CHECKING
 
-import time
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -683,9 +682,7 @@ class DecodingTask:
         try:
             for i in range(self.sample_len):
                 # NOTE: **********Here is the model inference****************
-                start = time.time()
                 logits = self.inference.logits(tokens, audio_features)
-                stop = time.time()
 
                 if type(self.sot_index) == list:
                     if i == 0 and not any(isinstance(tok.no_speech, type(None)) for tok in self.tokenizers):  # save no_speech_probs
@@ -705,13 +702,9 @@ class DecodingTask:
                 # apply the logit filters, e.g. for suppressing or applying penalty to
                 if (len(self.logit_filters) > 0) and (type(self.logit_filters[0]) == list):
                     # for batched case
-                    start = time.time()
                     for i,logit_filter_group in enumerate(self.logit_filters):
                         for logit_filter in logit_filter_group:
-                            st = time.time()
                             logit_filter.apply(logits[i].unsqueeze(0), tokens[i].unsqueeze(0))
-                            stp = time.time()
-                    stop = time.time()
                 elif len(self.logit_filters) > 0:
                     for logit_filter in self.logit_filters:
                         logit_filter.apply(logits, tokens)
@@ -722,9 +715,7 @@ class DecodingTask:
                     new_tokens = []
                     for i in range(len(self.decoder)):
                         # expand the tokens tensor with the selected next tokens
-                        start = time.time()
                         token_slice, comp = self.decoder[i].update(tokens[i].unsqueeze(0), logits[i].unsqueeze(0), sum_logprobs[i].unsqueeze(0))
-                        stop = time.time()
                         new_tokens.append(token_slice)
                         completed.append(comp)
                     tokens = torch.cat(new_tokens, dim=0)

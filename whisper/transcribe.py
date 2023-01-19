@@ -475,7 +475,7 @@ def batch_transcribe(
             if no_speech_threshold is not None:
                 for i,result in enumerate(results):
                     # no voice activity check
-                    should_skip = result.no_speech_prob[i] > no_speech_threshold
+                    should_skip = result.no_speech_prob > no_speech_threshold
                     if logprob_threshold is not None and result.avg_logprob > logprob_threshold:
                         # don't skip if the logprob is high enough, despite the no_speech_prob
                         should_skip = False

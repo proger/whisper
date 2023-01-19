@@ -677,7 +677,7 @@ class DecodingTask:
         assert audio_features.shape[0] == tokens.shape[0]
         n_batch = tokens.shape[0]
         sum_logprobs: Tensor = torch.zeros(n_batch, device=audio_features.device)
-        no_speech_probs = [np.nan] * n_batch
+        no_speech_probs = [np.nan]*n_batch
 
         try:
             for i in range(self.sample_len):
@@ -824,11 +824,11 @@ class DecodingTask:
                 tokens=tokens,
                 text=text,
                 avg_logprob=avg_logprob,
-                no_speech_prob=no_speech_prob,
+                no_speech_prob=no_speech_prob[i],
                 temperature=self.options.temperature,
                 compression_ratio=compression_ratio(text),
             )
-            for text, language, tokens, features, avg_logprob, no_speech_prob in zip(*fields)
+            for i, (text, language, tokens, features, avg_logprob, no_speech_prob) in enumerate(zip(*fields))
         ]
 
 

@@ -114,8 +114,9 @@ def log_mel_spectrogram(audio: Union[str, np.ndarray, torch.Tensor, List[str], L
         A Tensor that contains the Mel spectrogram
     """
     if type(audio) == list:
-        with mp.Pool() as p:
-            audio_files = p.map(audio_load_helper, audio)
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=32) as executor:
+            audio_files = executor.map(audio_load_helper, audio)
         return [log_mel_spectrogram(audio_file, n_mels) for audio_file in audio_files]
     else:
         if not torch.is_tensor(audio):
@@ -125,7 +126,7 @@ def log_mel_spectrogram(audio: Union[str, np.ndarray, torch.Tensor, List[str], L
 
     window = torch.hann_window(N_FFT).to(audio.device)
     stft = torch.stft(audio, N_FFT, HOP_LENGTH, window=window, return_complex=True)
-    magnitudes = stft[:, :-1].abs() ** 2
+    magnitudes = stft[..., :-1].abs() ** 2
 
     filters = mel_filters(audio.device, n_mels)
     mel_spec = filters @ magnitudes

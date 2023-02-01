@@ -16,6 +16,7 @@ from .utils import exact_div, format_timestamp, optional_int, optional_float, st
 if TYPE_CHECKING:
     from .model import Whisper
 
+torch.set_float32_matmul_precision('high')
 
 def transcribe(
     model: "Whisper",
@@ -605,23 +606,28 @@ def cli():
 
     from . import load_model
     model = load_model(model_name, device=device, download_root=model_dir)
+    model = torch.compile(model)
 
-    for audio_path in args.pop("audio"):
-        result = transcribe(model, audio_path, temperature=temperature, **args)
+    def batchify(xs, batch_size):
+        return [xs[i:i+batch_size] for i in range(0, len(xs), batch_size)]
 
-        audio_basename = os.path.basename(audio_path)
+    for paths in batchify(args.pop("audio"), batch_size=16):
+        results = batch_transcribe(model, paths, temperature=temperature, **args)
 
-        # save TXT
-        with open(os.path.join(output_dir, audio_basename + ".txt"), "w", encoding="utf-8") as txt:
-            write_txt(result["segments"], file=txt)
+        for audio_path, result in zip(paths, results):
+            audio_basename = os.path.basename(audio_path)
 
-        # save VTT
-        with open(os.path.join(output_dir, audio_basename + ".vtt"), "w", encoding="utf-8") as vtt:
-            write_vtt(result["segments"], file=vtt)
+            # save TXT
+            with open(os.path.join(output_dir, audio_basename + ".txt"), "w", encoding="utf-8") as txt:
+                write_txt(result["segments"], file=txt)
 
-        # save SRT
-        with open(os.path.join(output_dir, audio_basename + ".srt"), "w", encoding="utf-8") as srt:
-            write_srt(result["segments"], file=srt)
+            # save VTT
+            with open(os.path.join(output_dir, audio_basename + ".vtt"), "w", encoding="utf-8") as vtt:
+                write_vtt(result["segments"], file=vtt)
+
+            # save SRT
+            with open(os.path.join(output_dir, audio_basename + ".srt"), "w", encoding="utf-8") as srt:
+                write_srt(result["segments"], file=srt)
 
 
 if __name__ == '__main__':
